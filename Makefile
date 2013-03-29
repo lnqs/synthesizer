@@ -6,6 +6,11 @@ SOURCES = $(wildcard *.c)
 OBJECTS = $(SOURCES:.c=.o)
 EXECUTABLE = demo
 
+ifeq ($(shell uname -i), x86_64)
+	CFLAGS := $(CFLAGS) -m32
+	LDFLAGS := $(LDFLAGS) -m32
+endif
+
 all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS) $(MAKEFILE_LIST)
