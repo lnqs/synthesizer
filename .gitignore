@@ -2,3 +2,5 @@
 *.a
 *.d
 demo
+demo.debug
+demo.stripped
