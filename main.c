@@ -8,7 +8,7 @@ synthesizer_patch test = {
     .volume = 1.0f,
     .operations = {
         synthesizer_asdr_envelope(0.5f, 0.75f, 0.5f, 0.5f),
-        synthesizer_generator_sine(0.0f),
+        synthesizer_generator_square(0.0f),
         synthesizer_patch_end
     }
 };

@@ -59,27 +59,44 @@ float synthesizer_render_sample();
         .data = NULL \
     }
 
+// common stuff for all generators
+typedef struct _synthesizer_generator_data
+{
+    float pitch;
+    float phase;
+} _synthesizer_generator_data;
+
+void _synthesizer_generator_reset_data(void* data);
+
 // sine generator
 #define synthesizer_generator_sine(pitch_) \
     (_synthesizer_patch_operation) { \
         .type = nullary, \
         .nullary_fn = _synthesizer_generate_sine, \
         .release_fn = NULL, \
-        .reset_data_fn = _synthesizer_generator_sine_reset_data, \
-        .data = &(_synthesizer_generator_sine_data) { \
+        .reset_data_fn = _synthesizer_generator_reset_data, \
+        .data = &(_synthesizer_generator_data) { \
             .pitch = (pitch_), \
             .phase = 0.0f \
         } \
     }
 
-typedef struct _synthesizer_generator_sine_data
-{
-    float pitch;
-    float phase;
-} _synthesizer_generator_sine_data;
-
 float _synthesizer_generate_sine(void* data, float frequency);
-void _synthesizer_generator_sine_reset_data(void* data);
+
+// square generator
+#define synthesizer_generator_square(pitch_) \
+    (_synthesizer_patch_operation) { \
+        .type = nullary, \
+        .nullary_fn = _synthesizer_generate_square, \
+        .release_fn = NULL, \
+        .reset_data_fn = _synthesizer_generator_reset_data, \
+        .data = &(_synthesizer_generator_data) { \
+            .pitch = (pitch_), \
+            .phase = 0.0f \
+        } \
+    }
+
+float _synthesizer_generate_square(void* data, float frequency);
 
 // add operation
 #define synthesizer_operator_add \

@@ -137,19 +137,26 @@ float synthesizer_render_sample()
 // Patch Operations
 ///////////////////////////////////////////////////////////////////////////////
 
+// common stuff for all generators
+void _synthesizer_generator_reset_data(void* data)
+{
+    _synthesizer_generator_data* sine_data = data;
+    sine_data->phase = 0.0f;
+}
+
 // sine generator
 float _synthesizer_generate_sine(void* data, float frequency)
 {
-    _synthesizer_generator_sine_data* sine_data = data;
+    _synthesizer_generator_data* sine_data = data;
     float sample = sinf(2.0f * (frequency + sine_data->pitch) * M_PI * sine_data->phase);
     sine_data->phase = fmodf(sine_data->phase + 1.0f / synthesizer_sample_rate, 2.0f);
     return sample;
 }
 
-void _synthesizer_generator_sine_reset_data(void* data)
+// square generator
+float _synthesizer_generate_square(void* data, float frequency)
 {
-    _synthesizer_generator_sine_data* sine_data = data;
-    sine_data->phase = 0.0f;
+    return _synthesizer_generate_sine(data, frequency) > 0.0f ? 1.0f : -1.0f;
 }
 
 // add operation
