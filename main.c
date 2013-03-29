@@ -7,6 +7,7 @@ static const unsigned channels = 1;
 synthesizer_patch test = {
     .volume = 1.0f,
     .operations = {
+        synthesizer_asdr_envelope(0.5f, 0.75f, 0.5f, 0.5f),
         synthesizer_operator_add,
         synthesizer_generator_sine(440.0f),
         synthesizer_generator_sine(128.0f),

@@ -111,3 +111,50 @@ float _synthesizer_operate_add(void* data, float a, float b)
     return a + b;
 }
 
+// ADSR-envelope
+float _synthesizer_adsr_envelope(void* data, float a)
+{
+    _synthesizer_adsr_envelope_data* adsr_data = data;
+
+    const float sample_duration = 1.0f / synthesizer_sample_rate;
+
+    switch (adsr_data->phase)
+    {
+        case attack:
+            adsr_data->level += sample_duration / adsr_data->attack_time;
+            if (adsr_data->level >= 1.0f)
+            {
+                adsr_data->level = 1.0f;
+                adsr_data->phase = decay;
+            }
+            break;
+        case decay:
+            adsr_data->level -= sample_duration / adsr_data->decay_time;
+            if (adsr_data->level <= adsr_data->sustain_level)
+            {
+                adsr_data->level = adsr_data->sustain_level;
+                adsr_data->phase = sustain;
+            }
+            break;
+        case sustain:
+            // Yay! Do nothing!
+            break;
+        case release:
+            adsr_data->level -= sample_duration / adsr_data->release_time;
+            if (adsr_data->level <= 0.0f)
+            {
+                adsr_data->level = 0.0f;
+            }
+            break;
+    }
+
+    return adsr_data->level * a;
+}
+
+void _synthesizer_adsr_envelope_reset_data(void* data)
+{
+    _synthesizer_adsr_envelope_data* adsr_data = data;
+    adsr_data->phase = attack;
+    adsr_data->level = 0.0f;
+}
+

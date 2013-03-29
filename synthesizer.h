@@ -54,7 +54,7 @@ float synthesizer_render_sample();
         .type = nullary, \
         .nullary_fn = _synthesizer_generate_sine, \
         .reset_data_fn = _synthesizer_generator_sine_reset_data, \
-        .data = &(_synthesizer_generator_sine_data){ \
+        .data = &(_synthesizer_generator_sine_data) { \
             .frequency = (frequency_), \
             .phase = 0.0f \
         } \
@@ -66,8 +66,8 @@ typedef struct _synthesizer_generator_sine_data
     float phase;
 } _synthesizer_generator_sine_data;
 
-float _synthesizer_generate_sine(void*);
-void _synthesizer_generator_sine_reset_data(void*);
+float _synthesizer_generate_sine(void* data);
+void _synthesizer_generator_sine_reset_data(void* data);
 
 // add operation
 #define synthesizer_operator_add \
@@ -78,7 +78,45 @@ void _synthesizer_generator_sine_reset_data(void*);
         .data = NULL \
     }
 
-float _synthesizer_operate_add(void*, float a, float b);
+float _synthesizer_operate_add(void* data, float a, float b);
+
+// ADSR-envelope
+#define synthesizer_asdr_envelope(attack_time_, \
+        decay_time_, sustain_level_, release_time_) \
+    (_synthesizer_patch_operation) { \
+        .type = unary, \
+        .unary_fn = _synthesizer_adsr_envelope, \
+        .reset_data_fn = _synthesizer_adsr_envelope_reset_data, \
+        .data = &(_synthesizer_adsr_envelope_data) { \
+            .attack_time = (attack_time_), \
+            .decay_time = (decay_time_), \
+            .sustain_level = (sustain_level_), \
+            .release_time = (release_time_), \
+            .phase = attack, \
+            .level = 0.0f \
+        } \
+    }
+
+typedef struct _synthesizer_adsr_envelope_data
+{
+    float attack_time;
+    float decay_time;
+    float sustain_level;
+    float release_time;
+
+    enum
+    {
+        attack,
+        decay,
+        sustain,
+        release
+    } phase;
+
+    float level;
+} _synthesizer_adsr_envelope_data;
+
+float _synthesizer_adsr_envelope(void* data, float a);
+void _synthesizer_adsr_envelope_reset_data(void* data);
 
 #endif /* SYNTHESIZER_H */
 
