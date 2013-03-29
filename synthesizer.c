@@ -20,6 +20,8 @@ static struct
     synthesizer_patch* patch;
     bool active;
     float pitch;
+    float duration_left;
+    bool releasing;
 } synthesizer_voices[synthesizer_voice_number];
 
 static float synthesizer_patch_operate(
@@ -39,9 +41,33 @@ static float synthesizer_patch_operate(
             return operator->binary_fn(operator->data,
                     synthesizer_patch_operate(operation),
                     synthesizer_patch_operate(operation));
+        default:
+            return 0.0f; // never reached
     }
+}
 
-    return 0.0f; // never reached
+static void synthesizer_patch_release(synthesizer_patch* patch)
+{
+    for (_synthesizer_patch_operation* operation = patch->operations;
+            operation->type != end; operation++)
+    {
+        if (operation->release_fn)
+        {
+            operation->release_fn(operation->data);
+        }
+    }
+}
+
+static void synthesizer_patch_reset(synthesizer_patch* patch)
+{
+    for (_synthesizer_patch_operation* operation = patch->operations;
+            operation->type != end; operation++)
+    {
+        if (operation->reset_data_fn)
+        {
+            operation->reset_data_fn(operation->data);
+        }
+    }
 }
 
 void synthesizer_initialize(unsigned int sample_rate)
@@ -52,7 +78,7 @@ void synthesizer_initialize(unsigned int sample_rate)
     memset(synthesizer_voices, '\0', sizeof(synthesizer_voices));
 }
 
-void synthesizer_play_note(synthesizer_patch* patch, int note)
+void synthesizer_play_note(synthesizer_patch* patch, int note, float duration)
 {
     for (int i = 0; i < synthesizer_voice_number; i++)
     {
@@ -62,6 +88,8 @@ void synthesizer_play_note(synthesizer_patch* patch, int note)
             synthesizer_voices[i].patch = patch;
             synthesizer_voices[i].active = true;
             synthesizer_voices[i].pitch = 440.0f * powf(2.0f, note / 12.0f);
+            synthesizer_voices[i].duration_left = duration;
+            synthesizer_voices[i].releasing = false;
             break;
         }
     }
@@ -69,6 +97,8 @@ void synthesizer_play_note(synthesizer_patch* patch, int note)
 
 float synthesizer_render_sample()
 {
+    const float sample_duration = 1.0f / synthesizer_sample_rate;
+
     float out = 0.0f;
 
     for (int i = 0; i < synthesizer_voice_number; i++)
@@ -79,6 +109,20 @@ float synthesizer_render_sample()
                     = synthesizer_voices[i].patch->operations;
             out += synthesizer_voices[i].patch->volume
                     * synthesizer_patch_operate(&operation);
+
+            synthesizer_voices[i].duration_left -= sample_duration;
+            if (!synthesizer_voices[i].releasing
+                    && synthesizer_voices[i].duration_left <= 0.0f)
+            {
+                synthesizer_patch_release(synthesizer_voices[i].patch);
+                synthesizer_voices[i].releasing = true;
+            }
+
+            if (synthesizer_voices[i].releasing && out == 0.0f)
+            {
+                synthesizer_patch_reset(synthesizer_voices[i].patch);
+                synthesizer_voices[i].active = false;
+            }
         }
     }
 
@@ -149,6 +193,12 @@ float _synthesizer_adsr_envelope(void* data, float a)
     }
 
     return adsr_data->level * a;
+}
+
+void _synthesizer_adsr_envelope_release(void* data)
+{
+    _synthesizer_adsr_envelope_data* adsr_data = data;
+    adsr_data->phase = release;
 }
 
 void _synthesizer_adsr_envelope_reset_data(void* data)

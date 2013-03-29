@@ -11,6 +11,7 @@ synthesizer_patch test = {
         synthesizer_operator_add,
         synthesizer_generator_sine(440.0f),
         synthesizer_generator_sine(128.0f),
+        synthesizer_patch_end
     }
 };
 
@@ -21,7 +22,7 @@ int main(int argc, char** argv)
 
     synthesizer_initialize(sample_rate);
 
-    synthesizer_play_note(&test, 0);
+    synthesizer_play_note(&test, 0, 1.0f);
 
     while (1)
     {

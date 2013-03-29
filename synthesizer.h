@@ -13,7 +13,8 @@ typedef struct _synthesizer_patch_operation
     {
         nullary,
         unary,
-        binary
+        binary,
+        end
     } type;
 
     union
@@ -23,6 +24,7 @@ typedef struct _synthesizer_patch_operation
         float (*binary_fn)(void*, float, float);
     };
 
+    void (*release_fn)(void*);
     void (*reset_data_fn)(void*);
 
     void* data;
@@ -39,7 +41,7 @@ void synthesizer_initialize(unsigned int sample_rate);
 // note is the halftone to play. 0 is defined as the chamber tone, 440 Hz,
 // all others are relativ to it, while one octave has 12 halftones and each
 // octave doubles the frequency
-void synthesizer_play_note(synthesizer_patch* patch, int note);
+void synthesizer_play_note(synthesizer_patch* patch, int note, float duration);
 
 float synthesizer_render_sample();
 
@@ -48,11 +50,21 @@ float synthesizer_render_sample();
 // Patch Operations
 ///////////////////////////////////////////////////////////////////////////////
 
+// array-end marker
+#define synthesizer_patch_end \
+    (_synthesizer_patch_operation) { \
+        .type = end, \
+        .release_fn = NULL, \
+        .reset_data_fn = NULL, \
+        .data = NULL \
+    }
+
 // sine generator
 #define synthesizer_generator_sine(frequency_) \
     (_synthesizer_patch_operation) { \
         .type = nullary, \
         .nullary_fn = _synthesizer_generate_sine, \
+        .release_fn = NULL, \
         .reset_data_fn = _synthesizer_generator_sine_reset_data, \
         .data = &(_synthesizer_generator_sine_data) { \
             .frequency = (frequency_), \
@@ -74,6 +86,7 @@ void _synthesizer_generator_sine_reset_data(void* data);
     (_synthesizer_patch_operation) { \
         .type = binary, \
         .binary_fn = _synthesizer_operate_add, \
+        .release_fn = NULL, \
         .reset_data_fn = NULL, \
         .data = NULL \
     }
@@ -86,6 +99,7 @@ float _synthesizer_operate_add(void* data, float a, float b);
     (_synthesizer_patch_operation) { \
         .type = unary, \
         .unary_fn = _synthesizer_adsr_envelope, \
+        .release_fn = _synthesizer_adsr_envelope_release, \
         .reset_data_fn = _synthesizer_adsr_envelope_reset_data, \
         .data = &(_synthesizer_adsr_envelope_data) { \
             .attack_time = (attack_time_), \
@@ -116,6 +130,7 @@ typedef struct _synthesizer_adsr_envelope_data
 } _synthesizer_adsr_envelope_data;
 
 float _synthesizer_adsr_envelope(void* data, float a);
+void _synthesizer_adsr_envelope_release(void* data);
 void _synthesizer_adsr_envelope_reset_data(void* data);
 
 #endif /* SYNTHESIZER_H */
