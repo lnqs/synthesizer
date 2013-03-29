@@ -7,7 +7,7 @@ static const unsigned channels = 1;
 synthesizer_patch test = {
     .volume = 1.0f,
     .operations = {
-        synthesizer_asdr_envelope(0.25f, 0.75f, 0.25f, 0.25f),
+        synthesizer_asdr_envelope(0.1f, 0.0f, 1.0f, 0.1f),
         synthesizer_generator_square(0.0f),
         synthesizer_patch_end
     }
@@ -15,9 +15,9 @@ synthesizer_patch test = {
 
 void track(unsigned long position)
 {
-    if (position % sample_rate == 0)
+    if (position % (sample_rate * 4) == 0)
     {
-        synthesizer_play_note(&test, 0, 0.5f);
+        synthesizer_play_note(&test, -32, 3.0f);
     }
 }
 
@@ -35,6 +35,7 @@ int main(int argc, char** argv)
     }
 
     dsp_destroy();
+
     return 0;
 }
 
