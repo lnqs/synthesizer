@@ -19,13 +19,13 @@ typedef struct _synthesizer_patch_operation
 
     union
     {
-        float (*nullary_fn)(void*);
-        float (*unary_fn)(void*, float);
-        float (*binary_fn)(void*, float, float);
+        float (*nullary_fn)(void* data, float frequency);
+        float (*unary_fn)(void* data, float a, float frequency);
+        float (*binary_fn)(void*, float a, float b, float frequency);
     };
 
-    void (*release_fn)(void*);
-    void (*reset_data_fn)(void*);
+    void (*release_fn)(void* data);
+    void (*reset_data_fn)(void* data);
 
     void* data;
 } _synthesizer_patch_operation;
@@ -60,25 +60,25 @@ float synthesizer_render_sample();
     }
 
 // sine generator
-#define synthesizer_generator_sine(frequency_) \
+#define synthesizer_generator_sine(pitch_) \
     (_synthesizer_patch_operation) { \
         .type = nullary, \
         .nullary_fn = _synthesizer_generate_sine, \
         .release_fn = NULL, \
         .reset_data_fn = _synthesizer_generator_sine_reset_data, \
         .data = &(_synthesizer_generator_sine_data) { \
-            .frequency = (frequency_), \
+            .pitch = (pitch_), \
             .phase = 0.0f \
         } \
     }
 
 typedef struct _synthesizer_generator_sine_data
 {
-    float frequency;
+    float pitch;
     float phase;
 } _synthesizer_generator_sine_data;
 
-float _synthesizer_generate_sine(void* data);
+float _synthesizer_generate_sine(void* data, float frequency);
 void _synthesizer_generator_sine_reset_data(void* data);
 
 // add operation
@@ -91,7 +91,7 @@ void _synthesizer_generator_sine_reset_data(void* data);
         .data = NULL \
     }
 
-float _synthesizer_operate_add(void* data, float a, float b);
+float _synthesizer_operate_add(void* data, float a, float b, float frequency);
 
 // ADSR-envelope
 #define synthesizer_asdr_envelope(attack_time_, \
@@ -129,7 +129,7 @@ typedef struct _synthesizer_adsr_envelope_data
     float level;
 } _synthesizer_adsr_envelope_data;
 
-float _synthesizer_adsr_envelope(void* data, float a);
+float _synthesizer_adsr_envelope(void* data, float a, float frequency);
 void _synthesizer_adsr_envelope_release(void* data);
 void _synthesizer_adsr_envelope_reset_data(void* data);
 

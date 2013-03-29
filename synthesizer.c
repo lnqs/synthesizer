@@ -19,13 +19,13 @@ static struct
 {
     synthesizer_patch* patch;
     bool active;
-    float pitch;
+    float frequency;
     float duration_left;
     bool releasing;
 } synthesizer_voices[synthesizer_voice_number];
 
 static float synthesizer_patch_operate(
-        _synthesizer_patch_operation** operation)
+        _synthesizer_patch_operation** operation, float frequency)
 {
     _synthesizer_patch_operation* operator = *operation;
     *operation += 1;
@@ -33,14 +33,15 @@ static float synthesizer_patch_operate(
     switch (operator->type)
     {
         case nullary:
-            return operator->nullary_fn(operator->data);
+            return operator->nullary_fn(operator->data, frequency);
         case unary:
             return operator->unary_fn(operator->data,
-                    synthesizer_patch_operate(operation));
+                    synthesizer_patch_operate(operation, frequency), frequency);
         case binary:
             return operator->binary_fn(operator->data,
-                    synthesizer_patch_operate(operation),
-                    synthesizer_patch_operate(operation));
+                    synthesizer_patch_operate(operation, frequency),
+                    synthesizer_patch_operate(operation, frequency),
+                    frequency);
         default:
             return 0.0f; // never reached
     }
@@ -87,7 +88,7 @@ void synthesizer_play_note(synthesizer_patch* patch, int note, float duration)
         {
             synthesizer_voices[i].patch = patch;
             synthesizer_voices[i].active = true;
-            synthesizer_voices[i].pitch = 440.0f * powf(2.0f, note / 12.0f);
+            synthesizer_voices[i].frequency = 440.0f * powf(2.0f, note / 12.0f);
             synthesizer_voices[i].duration_left = duration;
             synthesizer_voices[i].releasing = false;
             break;
@@ -107,8 +108,10 @@ float synthesizer_render_sample()
         {
             _synthesizer_patch_operation* operation
                     = synthesizer_voices[i].patch->operations;
+
             out += synthesizer_voices[i].patch->volume
-                    * synthesizer_patch_operate(&operation);
+                    * synthesizer_patch_operate(
+                            &operation, synthesizer_voices[i].frequency);
 
             synthesizer_voices[i].duration_left -= sample_duration;
             if (!synthesizer_voices[i].releasing
@@ -135,10 +138,10 @@ float synthesizer_render_sample()
 ///////////////////////////////////////////////////////////////////////////////
 
 // sine generator
-float _synthesizer_generate_sine(void* data)
+float _synthesizer_generate_sine(void* data, float frequency)
 {
     _synthesizer_generator_sine_data* sine_data = data;
-    float sample = sinf(2.0f * sine_data->frequency * M_PI * sine_data->phase);
+    float sample = sinf(2.0f * (frequency + sine_data->pitch) * M_PI * sine_data->phase);
     sine_data->phase = fmodf(sine_data->phase + 1.0f / synthesizer_sample_rate, 2.0f);
     return sample;
 }
@@ -150,13 +153,13 @@ void _synthesizer_generator_sine_reset_data(void* data)
 }
 
 // add operation
-float _synthesizer_operate_add(void* data, float a, float b)
+float _synthesizer_operate_add(void* data, float a, float b, float frequency)
 {
     return a + b;
 }
 
 // ADSR-envelope
-float _synthesizer_adsr_envelope(void* data, float a)
+float _synthesizer_adsr_envelope(void* data, float a, float frequency)
 {
     _synthesizer_adsr_envelope_data* adsr_data = data;
 
