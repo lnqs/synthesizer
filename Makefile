@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS = -std=c99 -Wall -Werror -ggdb -Os $(shell pkg-config --cflags alsa)
+CFLAGS = -std=c99 -Wall -Werror -ggdb -Os -fomit-frame-pointer $(shell pkg-config --cflags alsa)
 LDFLAGS = -lm $(shell pkg-config --libs alsa)
 STRIP = sstrip
 COMPRESS = xz
