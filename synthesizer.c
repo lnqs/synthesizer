@@ -14,6 +14,9 @@
 static const int synthesizer_voice_number = 32;
 
 static float synthesizer_sample_rate;
+static void (*synthesizer_track)(unsigned long);
+
+static unsigned long synthesizer_position = 0;
 
 static struct
 {
@@ -71,9 +74,10 @@ static void synthesizer_patch_reset(synthesizer_patch* patch)
     }
 }
 
-void synthesizer_initialize(unsigned int sample_rate)
+void synthesizer_initialize(unsigned int sample_rate, void (*track)(unsigned long))
 {
     synthesizer_sample_rate = sample_rate;
+    synthesizer_track = track;
 
     // just initialize all members to 0
     memset(synthesizer_voices, '\0', sizeof(synthesizer_voices));
@@ -96,40 +100,45 @@ void synthesizer_play_note(synthesizer_patch* patch, int note, float duration)
     }
 }
 
-float synthesizer_render_sample()
+void synthesizer_render(float buffer[], size_t length)
 {
     const float sample_duration = 1.0f / synthesizer_sample_rate;
 
-    float out = 0.0f;
-
-    for (int i = 0; i < synthesizer_voice_number; i++)
+    for (size_t p = 0; p < length; p++)
     {
-        if (synthesizer_voices[i].active)
+        synthesizer_track(synthesizer_position++);
+
+        float sample = 0.0f;
+
+        for (int v = 0; v < synthesizer_voice_number; v++)
         {
-            _synthesizer_patch_operation* operation
-                    = synthesizer_voices[i].patch->operations;
-
-            out += synthesizer_voices[i].patch->volume
-                    * synthesizer_patch_operate(
-                            &operation, synthesizer_voices[i].frequency);
-
-            synthesizer_voices[i].duration_left -= sample_duration;
-            if (!synthesizer_voices[i].releasing
-                    && synthesizer_voices[i].duration_left <= 0.0f)
+            if (synthesizer_voices[v].active)
             {
-                synthesizer_patch_release(synthesizer_voices[i].patch);
-                synthesizer_voices[i].releasing = true;
-            }
+                _synthesizer_patch_operation* operation
+                        = synthesizer_voices[v].patch->operations;
 
-            if (synthesizer_voices[i].releasing && out == 0.0f)
-            {
-                synthesizer_patch_reset(synthesizer_voices[i].patch);
-                synthesizer_voices[i].active = false;
+                sample += synthesizer_voices[v].patch->volume
+                        * synthesizer_patch_operate(
+                                &operation, synthesizer_voices[v].frequency);
+
+                synthesizer_voices[v].duration_left -= sample_duration;
+                if (!synthesizer_voices[v].releasing
+                        && synthesizer_voices[v].duration_left <= 0.0f)
+                {
+                    synthesizer_patch_release(synthesizer_voices[v].patch);
+                    synthesizer_voices[v].releasing = true;
+                }
+
+                if (synthesizer_voices[v].releasing && sample == 0.0f)
+                {
+                    synthesizer_patch_reset(synthesizer_voices[v].patch);
+                    synthesizer_voices[v].active = false;
+                }
             }
         }
-    }
 
-    return out;
+        buffer[p] = sample;
+    }
 }
 
 

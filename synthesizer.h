@@ -1,6 +1,8 @@
 #ifndef SYNTHESIZER_H
 #define SYNTHESIZER_H
 
+#include <stddef.h>
+
 ///////////////////////////////////////////////////////////////////////////////
 // General synthesizer-stuff
 ///////////////////////////////////////////////////////////////////////////////
@@ -36,14 +38,14 @@ typedef struct synthesizer_patch
     _synthesizer_patch_operation operations[];
 } synthesizer_patch;
 
-void synthesizer_initialize(unsigned int sample_rate);
+void synthesizer_initialize(unsigned int sample_rate, void (*track)(unsigned long));
 
 // note is the halftone to play. 0 is defined as the chamber tone, 440 Hz,
 // all others are relativ to it, while one octave has 12 halftones and each
 // octave doubles the frequency
 void synthesizer_play_note(synthesizer_patch* patch, int note, float duration);
 
-float synthesizer_render_sample();
+void synthesizer_render(float buffer[], size_t length);
 
 
 ///////////////////////////////////////////////////////////////////////////////
