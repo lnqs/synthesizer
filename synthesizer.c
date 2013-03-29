@@ -2,6 +2,8 @@
 #include <math.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -85,6 +87,15 @@ void synthesizer_initialize(unsigned int sample_rate, void (*track)(unsigned lon
 
 void synthesizer_play_note(synthesizer_patch* patch, int note, float duration)
 {
+    for (int i = 0; i < synthesizer_voice_number; i++)
+    {
+        if (synthesizer_voices[i].active && synthesizer_voices[i].patch == patch)
+        {
+            fprintf(stderr, "patch at %p is already in use\n", patch);
+            exit(2);
+        }
+    }
+
     for (int i = 0; i < synthesizer_voice_number; i++)
     {
         // search for the first free voice. if there's none, well...
