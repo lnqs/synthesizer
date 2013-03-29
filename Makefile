@@ -1,6 +1,8 @@
 CC = clang
 CFLAGS = -std=c99 -Wall -Werror -ggdb -Os -fomit-frame-pointer $(shell pkg-config --cflags alsa)
 LDFLAGS = -lm $(shell pkg-config --libs alsa)
+STRIP = sstrip
+COMPRESS = xz
 EXTRACT_SCRIPT = \#!/bin/sh\ntail -c+59 "$$0"|unxz>d;chmod +x d;./d;rm d;exit
 
 SOURCES = $(wildcard *.c)
@@ -16,13 +18,12 @@ all: $(SOURCES) $(EXECUTABLE)
 
 $(EXECUTABLE): $(EXECUTABLE).stripped
 	echo '$(EXTRACT_SCRIPT)' > $@
-	xz -kec $< >> $@
+	$(COMPRESS) -kec $< >> $@
 	chmod +x $@
 
 $(EXECUTABLE).stripped: $(EXECUTABLE).debug
 	cp -f $< $@
-	strip -R .comment -R .gnu.version $@
-	sstrip $@
+	$(STRIP) $@
 
 $(EXECUTABLE).debug: $(OBJECTS) $(MAKEFILE_LIST)
 	$(CC) $(LDFLAGS) -o $@ $(OBJECTS)
