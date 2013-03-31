@@ -1,5 +1,5 @@
 CC = clang
-CFLAGS = -std=c99 -Wall -Werror -ggdb -Oz -fomit-frame-pointer $(shell pkg-config --cflags alsa)
+CFLAGS = -std=c99 -Wall -Werror -ggdb -O0 $(shell pkg-config --cflags alsa)
 LDFLAGS = -lm $(shell pkg-config --libs alsa)
 STRIP = sstrip
 COMPRESS = xz
@@ -8,11 +8,6 @@ EXTRACT_SCRIPT = \#!/bin/sh\ntail -c+59 "$$0"|unxz>d;chmod +x d;./d;rm d;exit
 SOURCES = $(wildcard *.c)
 OBJECTS = $(SOURCES:.c=.o)
 EXECUTABLE = demo
-
-ifeq ($(shell uname -i), x86_64)
-	CFLAGS := $(CFLAGS) -m32
-	LDFLAGS := $(LDFLAGS) -m32
-endif
 
 all: $(SOURCES) $(EXECUTABLE)
 
