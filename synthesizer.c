@@ -13,7 +13,7 @@
 // General synthesizer-stuff
 ///////////////////////////////////////////////////////////////////////////////
 
-static const int synthesizer_voice_number = 32;
+#define synthesizer_voice_number 32
 
 static float synthesizer_sample_rate;
 static void (*synthesizer_track)(unsigned long);
