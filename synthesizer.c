@@ -30,49 +30,62 @@ static struct
 } synthesizer_voices[synthesizer_voice_number];
 
 static float synthesizer_patch_operate(
-        _synthesizer_patch_operation** operation, float frequency)
+        _synthesizer_patch_operation* operation, float frequency)
 {
-    _synthesizer_patch_operation* operator = *operation;
-    *operation += 1;
-
-    switch (operator->type)
+    switch (operation->type)
     {
         case nullary:
-            return operator->nullary_fn(operator->data, frequency);
+            return operation->nullary_data.operate_fn(operation->data, frequency);
         case unary:
-            return operator->unary_fn(operator->data,
-                    synthesizer_patch_operate(operation, frequency), frequency);
+            return operation->unary_data.operate_fn(operation->data,
+                    synthesizer_patch_operate(operation->unary_data.child, frequency),
+                    frequency);
         case binary:
-            return operator->binary_fn(operator->data,
-                    synthesizer_patch_operate(operation, frequency),
-                    synthesizer_patch_operate(operation, frequency),
+            return operation->binary_data.operate_fn(operation->data,
+                    synthesizer_patch_operate(operation->binary_data.first_child, frequency),
+                    synthesizer_patch_operate(operation->binary_data.second_child, frequency),
                     frequency);
         default:
             return 0.0f; // never reached
     }
 }
 
-static void synthesizer_patch_release(synthesizer_patch* patch)
+static void synthesizer_patch_visit_operations(
+        _synthesizer_patch_operation* operation,
+        void (*visit_fn)(_synthesizer_patch_operation*))
 {
-    for (_synthesizer_patch_operation* operation = patch->operations;
-            operation->type != end; operation++)
+    switch (operation->type)
     {
-        if (operation->release_fn)
-        {
-            operation->release_fn(operation->data);
-        }
+        case nullary:
+            break;
+        case unary:
+            synthesizer_patch_visit_operations(
+                    operation->unary_data.child, visit_fn);
+            break;
+        case binary:
+            synthesizer_patch_visit_operations(
+                    operation->binary_data.first_child, visit_fn);
+            synthesizer_patch_visit_operations(
+                    operation->binary_data.second_child, visit_fn);
+            break;
+    }
+
+    visit_fn(operation);
+}
+
+static void synthesizer_operation_release(_synthesizer_patch_operation* operation)
+{
+    if (operation->release_fn)
+    {
+        operation->release_fn(operation->data);
     }
 }
 
-static void synthesizer_patch_reset(synthesizer_patch* patch)
+static void synthesizer_operation_reset(_synthesizer_patch_operation* operation)
 {
-    for (_synthesizer_patch_operation* operation = patch->operations;
-            operation->type != end; operation++)
+    if (operation->reset_data_fn)
     {
-        if (operation->reset_data_fn)
-        {
-            operation->reset_data_fn(operation->data);
-        }
+        operation->reset_data_fn(operation->data);
     }
 }
 
@@ -125,24 +138,28 @@ void synthesizer_render(float buffer[], size_t length)
         {
             if (synthesizer_voices[v].active)
             {
-                _synthesizer_patch_operation* operation
-                        = synthesizer_voices[v].patch->operations;
-
                 sample += synthesizer_voices[v].patch->volume
                         * synthesizer_patch_operate(
-                                &operation, synthesizer_voices[v].frequency);
+                                synthesizer_voices[v].patch->operations[0],
+                                synthesizer_voices[v].frequency);
 
                 synthesizer_voices[v].duration_left -= sample_duration;
                 if (!synthesizer_voices[v].releasing
                         && synthesizer_voices[v].duration_left <= 0.0f)
                 {
-                    synthesizer_patch_release(synthesizer_voices[v].patch);
+                    synthesizer_patch_visit_operations(
+                            synthesizer_voices[v].patch->operations[0],
+                            synthesizer_operation_release);
+
                     synthesizer_voices[v].releasing = true;
                 }
 
                 if (synthesizer_voices[v].releasing && sample == 0.0f)
                 {
-                    synthesizer_patch_reset(synthesizer_voices[v].patch);
+                    synthesizer_patch_visit_operations(
+                            synthesizer_voices[v].patch->operations[0],
+                            synthesizer_operation_reset);
+
                     synthesizer_voices[v].active = false;
                 }
             }
@@ -180,7 +197,7 @@ float _synthesizer_generate_square(void* data, float frequency)
 }
 
 // add operation
-float _synthesizer_operate_add(void* data, float a, float b, float frequency)
+float _synthesizer_add(void* data, float a, float b, float frequency)
 {
     return a + b;
 }

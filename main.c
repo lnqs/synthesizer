@@ -7,9 +7,13 @@ static const unsigned channels = 1;
 synthesizer_patch test = {
     .volume = 1.0f,
     .operations = {
-        synthesizer_asdr_envelope(0.1f, 0.0f, 1.0f, 0.1f),
-        synthesizer_generator_square(0.0f),
-        synthesizer_patch_end
+        synthesizer_asdr_envelope(
+            synthesizer_add(
+                synthesizer_generator_sine(0.0f),
+                synthesizer_generator_square(0.0f)
+            ),
+            0.1f, 0.0f, 1.0f, 0.1f
+        )
     }
 };
 

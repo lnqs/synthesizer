@@ -15,15 +15,28 @@ typedef struct _synthesizer_patch_operation
     {
         nullary,
         unary,
-        binary,
-        end
+        binary
     } type;
 
     union
     {
-        float (*nullary_fn)(void* data, float frequency);
-        float (*unary_fn)(void* data, float a, float frequency);
-        float (*binary_fn)(void*, float a, float b, float frequency);
+        struct
+        {
+            float (*operate_fn)(void* data, float frequency);
+        } nullary_data;
+
+        struct
+        {
+            float (*operate_fn)(void* data, float a, float frequency);
+            struct _synthesizer_patch_operation* child;
+        } unary_data;
+
+        struct
+        {
+            float (*operate_fn)(void*, float a, float b, float frequency);
+            struct _synthesizer_patch_operation* first_child;
+            struct _synthesizer_patch_operation* second_child;
+        } binary_data;
     };
 
     void (*release_fn)(void* data);
@@ -35,7 +48,7 @@ typedef struct _synthesizer_patch_operation
 typedef struct synthesizer_patch
 {
     float volume;
-    _synthesizer_patch_operation operations[];
+    _synthesizer_patch_operation* operations[];
 } synthesizer_patch;
 
 void synthesizer_initialize(unsigned int sample_rate, void (*track)(unsigned long));
@@ -52,15 +65,6 @@ void synthesizer_render(float buffer[], size_t length);
 // Patch Operations
 ///////////////////////////////////////////////////////////////////////////////
 
-// array-end marker
-#define synthesizer_patch_end \
-    (_synthesizer_patch_operation) { \
-        .type = end, \
-        .release_fn = NULL, \
-        .reset_data_fn = NULL, \
-        .data = NULL \
-    }
-
 // common stuff for all generators
 typedef struct _synthesizer_generator_data
 {
@@ -72,9 +76,9 @@ void _synthesizer_generator_reset_data(void* data);
 
 // sine generator
 #define synthesizer_generator_sine(pitch_) \
-    (_synthesizer_patch_operation) { \
+    &(_synthesizer_patch_operation) { \
         .type = nullary, \
-        .nullary_fn = _synthesizer_generate_sine, \
+        .nullary_data.operate_fn = _synthesizer_generate_sine, \
         .release_fn = NULL, \
         .reset_data_fn = _synthesizer_generator_reset_data, \
         .data = &(_synthesizer_generator_data) { \
@@ -87,9 +91,9 @@ float _synthesizer_generate_sine(void* data, float frequency);
 
 // square generator
 #define synthesizer_generator_square(pitch_) \
-    (_synthesizer_patch_operation) { \
+    &(_synthesizer_patch_operation) { \
         .type = nullary, \
-        .nullary_fn = _synthesizer_generate_square, \
+        .nullary_data.operate_fn = _synthesizer_generate_square, \
         .release_fn = NULL, \
         .reset_data_fn = _synthesizer_generator_reset_data, \
         .data = &(_synthesizer_generator_data) { \
@@ -101,23 +105,30 @@ float _synthesizer_generate_sine(void* data, float frequency);
 float _synthesizer_generate_square(void* data, float frequency);
 
 // add operation
-#define synthesizer_operator_add \
-    (_synthesizer_patch_operation) { \
+#define synthesizer_add(first_child_, second_child_) \
+    &(_synthesizer_patch_operation) { \
         .type = binary, \
-        .binary_fn = _synthesizer_operate_add, \
+        .binary_data = {  \
+            .operate_fn = _synthesizer_add, \
+            .first_child = (first_child_), \
+            .second_child = (second_child_), \
+        }, \
         .release_fn = NULL, \
         .reset_data_fn = NULL, \
         .data = NULL \
     }
 
-float _synthesizer_operate_add(void* data, float a, float b, float frequency);
+float _synthesizer_add(void* data, float a, float b, float frequency);
 
 // ADSR-envelope
-#define synthesizer_asdr_envelope(attack_time_, \
+#define synthesizer_asdr_envelope(child_, attack_time_, \
         decay_time_, sustain_level_, release_time_) \
-    (_synthesizer_patch_operation) { \
+    &(_synthesizer_patch_operation) { \
         .type = unary, \
-        .unary_fn = _synthesizer_adsr_envelope, \
+        .unary_data = { \
+            .operate_fn = _synthesizer_adsr_envelope, \
+            .child = (child_) \
+        }, \
         .release_fn = _synthesizer_adsr_envelope_release, \
         .reset_data_fn = _synthesizer_adsr_envelope_reset_data, \
         .data = &(_synthesizer_adsr_envelope_data) { \
