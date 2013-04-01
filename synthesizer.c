@@ -206,10 +206,22 @@ float _synthesizer_generate_square(void* data, float frequency)
     return _synthesizer_generate_sine(data, frequency) > 0.0f ? 1.0f : -1.0f;
 }
 
+// white noise generator
+float _synthesizer_generate_white_noise(void* data, float frequency)
+{
+    return rand() / (float)RAND_MAX;
+}
+
 // add operation
 float _synthesizer_add(void* data, float a, float b, float frequency)
 {
     return a + b;
+}
+
+// multiply operation
+float _synthesizer_multiply(void* data, float a, float b, float frequency)
+{
+    return a * b;
 }
 
 // ADSR-envelope

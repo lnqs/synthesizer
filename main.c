@@ -10,7 +10,10 @@ synthesizer_patch test = {
         synthesizer_asdr_envelope(
             synthesizer_flanger(
                 synthesizer_generator_sine(0.0f, 0),
-                synthesizer_generator_sine(0.1f, ignore_note_frequency),
+                synthesizer_multiply(
+                    synthesizer_generator_sine(0.1f, ignore_note_frequency),
+                    synthesizer_generator_white_noise()
+                ),
                 0.01f
             ),
             0.1f, 0.0f, 1.0f, 0.1f

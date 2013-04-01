@@ -112,6 +112,18 @@ float _synthesizer_generate_sine(void* data, float frequency);
 
 float _synthesizer_generate_square(void* data, float frequency);
 
+// white noise generator
+#define synthesizer_generator_white_noise() \
+    &(_synthesizer_patch_operation) { \
+        .type = nullary, \
+        .nullary_data.operate_fn = _synthesizer_generate_white_noise, \
+        .release_fn = NULL, \
+        .reset_data_fn = NULL, \
+        .data = NULL \
+    }
+
+float _synthesizer_generate_white_noise(void* data, float frequency);
+
 // add operation
 #define synthesizer_add(first_child_, second_child_) \
     &(_synthesizer_patch_operation) { \
@@ -127,6 +139,22 @@ float _synthesizer_generate_square(void* data, float frequency);
     }
 
 float _synthesizer_add(void* data, float a, float b, float frequency);
+
+// multiply operation
+#define synthesizer_multiply(first_child_, second_child_) \
+    &(_synthesizer_patch_operation) { \
+        .type = binary, \
+        .binary_data = {  \
+            .operate_fn = _synthesizer_multiply, \
+            .first_child = (first_child_), \
+            .second_child = (second_child_), \
+        }, \
+        .release_fn = NULL, \
+        .reset_data_fn = NULL, \
+        .data = NULL \
+    }
+
+float _synthesizer_multiply(void* data, float a, float b, float frequency);
 
 // ADSR-envelope
 #define synthesizer_asdr_envelope(child_, attack_time_, \
