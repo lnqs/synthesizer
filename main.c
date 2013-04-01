@@ -8,9 +8,10 @@ synthesizer_patch test = {
     .volume = 1.0f,
     .operations = {
         synthesizer_asdr_envelope(
-            synthesizer_add(
-                synthesizer_generator_sine(0.0f),
-                synthesizer_generator_square(0.0f)
+            synthesizer_flanger(
+                synthesizer_generator_sine(0.0f, 0),
+                synthesizer_generator_sine(0.1f, ignore_note_frequency),
+                0.01f
             ),
             0.1f, 0.0f, 1.0f, 0.1f
         )
@@ -21,7 +22,7 @@ void track(unsigned long position)
 {
     if (position % (sample_rate * 4) == 0)
     {
-        synthesizer_play_note(&test, -32, 3.0f);
+        synthesizer_play_note(&test, 0, 3.0f);
     }
 }
 

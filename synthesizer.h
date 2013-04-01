@@ -68,14 +68,20 @@ void synthesizer_render(float buffer[], size_t length);
 // common stuff for all generators
 typedef struct _synthesizer_generator_data
 {
+    enum flags
+    {
+        ignore_note_frequency = 0x1
+    };
+
     float pitch;
     float phase;
+    unsigned int flags;
 } _synthesizer_generator_data;
 
 void _synthesizer_generator_reset_data(void* data);
 
 // sine generator
-#define synthesizer_generator_sine(pitch_) \
+#define synthesizer_generator_sine(pitch_, flags_) \
     &(_synthesizer_patch_operation) { \
         .type = nullary, \
         .nullary_data.operate_fn = _synthesizer_generate_sine, \
@@ -83,14 +89,15 @@ void _synthesizer_generator_reset_data(void* data);
         .reset_data_fn = _synthesizer_generator_reset_data, \
         .data = &(_synthesizer_generator_data) { \
             .pitch = (pitch_), \
-            .phase = 0.0f \
+            .phase = 0.0f, \
+            .flags = (flags_) \
         } \
     }
 
 float _synthesizer_generate_sine(void* data, float frequency);
 
 // square generator
-#define synthesizer_generator_square(pitch_) \
+#define synthesizer_generator_square(pitch_, flags_) \
     &(_synthesizer_patch_operation) { \
         .type = nullary, \
         .nullary_data.operate_fn = _synthesizer_generate_square, \
@@ -98,7 +105,8 @@ float _synthesizer_generate_sine(void* data, float frequency);
         .reset_data_fn = _synthesizer_generator_reset_data, \
         .data = &(_synthesizer_generator_data) { \
             .pitch = (pitch_), \
-            .phase = 0.0f \
+            .phase = 0.0f, \
+            .flags = (flags_) \
         } \
     }
 
@@ -162,6 +170,33 @@ typedef struct _synthesizer_adsr_envelope_data
 float _synthesizer_adsr_envelope(void* data, float a, float frequency);
 void _synthesizer_adsr_envelope_release(void* data);
 void _synthesizer_adsr_envelope_reset_data(void* data);
+
+// flanger effect
+#define synthesizer_flanger(input, delay_controller, max_delay_) \
+    &(_synthesizer_patch_operation) { \
+        .type = binary, \
+        .binary_data = { \
+            .operate_fn = _synthesizer_flange, \
+            .first_child = (input), \
+            .second_child = (delay_controller) \
+        }, \
+        .release_fn = NULL, \
+        .reset_data_fn = _synthesizer_flanger_reset, \
+        .data = &(_synthesizer_flanger_data) { \
+            .max_delay = (max_delay_), \
+            .position = 0 \
+        } \
+    }
+
+typedef struct _synthesizer_flanger_data
+{
+    float max_delay;
+    size_t position;
+    float buffer[1024];
+} _synthesizer_flanger_data;
+
+float _synthesizer_flange(void* data, float a, float b, float frequency);
+void _synthesizer_flanger_reset(void* data);
 
 #endif /* SYNTHESIZER_H */
 

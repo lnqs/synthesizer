@@ -15,7 +15,7 @@
 
 #define synthesizer_voice_number 32
 
-static float synthesizer_sample_rate;
+static unsigned int synthesizer_sample_rate;
 static void (*synthesizer_track)(unsigned long);
 
 static unsigned long synthesizer_position = 0;
@@ -185,7 +185,17 @@ void _synthesizer_generator_reset_data(void* data)
 float _synthesizer_generate_sine(void* data, float frequency)
 {
     _synthesizer_generator_data* sine_data = data;
-    float sample = sinf(2.0f * (frequency + sine_data->pitch) * M_PI * sine_data->phase);
+
+    if (sine_data->flags & ignore_note_frequency)
+    {
+        frequency = sine_data->pitch;
+    }
+    else
+    {
+        frequency += sine_data->pitch;
+    }
+
+    float sample = sinf(2.0f * frequency * M_PI * sine_data->phase);
     sine_data->phase = fmodf(sine_data->phase + 1.0f / synthesizer_sample_rate, 2.0f);
     return sample;
 }
@@ -253,5 +263,26 @@ void _synthesizer_adsr_envelope_reset_data(void* data)
     _synthesizer_adsr_envelope_data* adsr_data = data;
     adsr_data->phase = attack;
     adsr_data->level = 0.0f;
+}
+
+// flanger effect
+float _synthesizer_flange(void* data, float a, float b, float frequency)
+{
+    _synthesizer_flanger_data* flanger_data = data;
+    const size_t buffer_length = sizeof(flanger_data->buffer) / sizeof(float);
+
+    flanger_data->position = (flanger_data->position + 1) % buffer_length;
+    flanger_data->buffer[flanger_data->position] = a;
+
+    size_t out_position = (flanger_data->position + (size_t)(flanger_data->max_delay
+                * synthesizer_sample_rate * (b / 2.0 + 1.0))) % buffer_length;
+    return flanger_data->buffer[out_position] + a;
+}
+
+void _synthesizer_flanger_reset(void* data)
+{
+    _synthesizer_flanger_data* flanger_data = data;
+    flanger_data->position = 0;
+    memset(flanger_data->buffer, '\0', sizeof(flanger_data->buffer));
 }
 
