@@ -65,6 +65,25 @@ void synthesizer_render(float buffer[], size_t length);
 // Patch Operations
 ///////////////////////////////////////////////////////////////////////////////
 
+// static values
+#define synthesizer_static_value(value_) \
+    &(_synthesizer_patch_operation) { \
+        .type = nullary, \
+        .nullary_data.operate_fn = _synthesizer_static_value, \
+        .release_fn = NULL, \
+        .reset_data_fn = NULL, \
+        .data = &(_synthesizer_static_value_data) { \
+            .value = (value_) \
+        } \
+    }
+
+typedef struct _synthesizer_static_value_data
+{
+    float value;
+} _synthesizer_static_value_data;
+
+float _synthesizer_static_value(void* data, float frequency);
+
 // common stuff for all generators
 typedef struct _synthesizer_generator_data
 {

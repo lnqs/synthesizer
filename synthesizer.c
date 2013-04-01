@@ -174,6 +174,13 @@ void synthesizer_render(float buffer[], size_t length)
 // Patch Operations
 ///////////////////////////////////////////////////////////////////////////////
 
+// static values
+float _synthesizer_static_value(void* data, float frequency)
+{
+    _synthesizer_static_value_data* value_data = data;
+    return value_data->value;
+}
+
 // common stuff for all generators
 void _synthesizer_generator_reset_data(void* data)
 {
@@ -196,7 +203,7 @@ float _synthesizer_generate_sine(void* data, float frequency)
     }
 
     float sample = sinf(2.0f * frequency * M_PI * sine_data->phase);
-    sine_data->phase = fmodf(sine_data->phase + 1.0f / synthesizer_sample_rate, 2.0f);
+    sine_data->phase += 1.0f / synthesizer_sample_rate;
     return sample;
 }
 
